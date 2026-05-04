@@ -73,9 +73,11 @@
 </div>
 
         <div class="text-center mb-3">
-            <button type="button" onclick="ativarMonique()" id="btnMonique">
-                🐱 Monique
-            </button>
+            {% if session.usuario|lower == 'monique' %}
+<button type="button" onclick="ativarMonique()" id="btnMonique">
+    🐱 Monique
+</button>
+{% endif %}
         </div>
 
         <h2 class="text-center mb-4" style="color: #2c3e50;">🚀 Lançamentos Contabil Manual</h2>
