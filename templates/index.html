@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAP Bridge | Integrador PJ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.5s ease; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .btn-sap { background-color: #0070d2; color: white; border-radius: 8px; font-weight: 600; }
+        .btn-sap:hover { background-color: #005fb2; color: white; }
+        .btn-preview { background-color: #2c3e50; color: white; }
+        .table-container { background: white; border-radius: 10px; padding: 20px; }
+        .remove-btn { color: #e74c3c; cursor: pointer; border: none; background: none; font-size: 1.2rem; }
+        #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
+
+        #btnMonique {
+            background: linear-gradient(135deg, #ff69b4, #ff1493);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(255, 20, 147, 0.3);
+        }
+        #btnMonique:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(255, 20, 147, 0.5);
+        }
+
+        .gato-voador {
+            position: fixed;
+            z-index: 0;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .galho {
+            position: fixed;
+            z-index: 999;
+            pointer-events: none;
+            font-size: 2.5rem;
+            opacity: 0.4;
+        }
+
+        @keyframes pularGalho {
+            0%   { transform: translateY(0px) rotate(-10deg) scaleX(1); bottom: -80px; opacity: 0; }
+            10%  { opacity: 1; }
+            30%  { transform: translateY(-40vh) rotate(10deg) scaleX(-1); }
+            50%  { transform: translateY(-70vh) rotate(-5deg) scaleX(1); }
+            70%  { transform: translateY(-50vh) rotate(15deg) scaleX(-1); }
+            90%  { opacity: 1; }
+            100% { transform: translateY(-110vh) rotate(-10deg) scaleX(1); bottom: 110vh; opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loading">
+    <div class="spinner-border text-primary"></div>
+    <span class="mt-2 fw-bold">Processando requisição SAP...</span>
+</div>
+
+<div class="container py-5" style="position: relative; z-index: 1;">
+    <div class="card p-4 mb-5">
+        <div class="d-flex justify-content-end mb-3">
+    <span class="me-3 fw-bold">👤 {{ session.usuario }}</span>
+    <a href="/logout" class="btn btn-sm btn-danger">Sair</a>
+</div>
+
+        <div class="text-center mb-3">
+            <button type="button" onclick="ativarMonique()" id="btnMonique">
+                🐱 Monique
+            </button>
+        </div>
+
+        <h2 class="text-center mb-4" style="color: #2c3e50;">🚀 Lançamentos Contabil Manual</h2>
+
+        <form action="/processar" method="post" enctype="multipart/form-data" id="mainForm">
+
+            <input type="hidden" name="json_editado" id="json_editado">
+            <input type="hidden" name="acao" id="acao_hidden">
+
+            <div class="row g-3">
+
+                <div class="col-md-12">
+                    <label class="form-label fw-bold">Vendedor / Parceiro</label>
+                    <select name="vendedor" class="form-select">
+                        <option value="TODOS">GERAL (TODOS)</option>
+                        {% for v in vendedores_lista %}
+                        <option value="{{ v }}">{{ v }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Mês</label>
+                    <select name="mes" class="form-select">
+                        {% for m in meses %}
+                        <option value="{{ m }}">{{ m }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Data Lançamento</label>
+                    <input type="date" name="data_lancamento" class="form-control" required>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Data Vencimento</label>
+                    <input type="date" name="data_vencimento" class="form-control" required>
+                </div>
+
+                <div class="col-md-12">
+                    <label class="form-label fw-bold">Relatório</label>
+                    <input type="file" name="relatorio" class="form-control" required>
+                </div>
+
+                <div class="col-12 mt-4">
+                    <button type="button" onclick="gerarPreview()" class="btn btn-preview w-100 py-2 fw-bold">
+                        🔍 GERAR PRÉVIA
+                    </button>
+                </div>
+
+            </div>
+
+        </form>
+
+        <h3 class="mt-4">Adicionar Vendedor</h3>
+        <form action="/add_vendedor" method="post">
+            <input type="text" name="nome" placeholder="Nome do vendedor" required>
+            <input type="text" name="pn" placeholder="Código PN" required>
+            <button type="submit">Adicionar</button>
+        </form>
+
+        <h3 class="mt-4">Editar PN do Vendedor</h3>
+        <form action="/editar_vendedor" method="post">
+            <div class="row g-2">
+                <div class="col-md-5">
+                    <input type="text" name="nome" class="form-control" placeholder="Nome do vendedor" required>
+                </div>
+                <div class="col-md-5">
+                    <input type="text" name="pn" class="form-control" placeholder="Novo Código PN" required>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Atualizar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    {% if payload %}
+    <div class="table-container shadow mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="m-0 text-primary">⚠️ Conferência</h4>
+            <button type="button" onclick="enviarParaSap()" class="btn btn-sap btn-lg px-5">
+                POSTAR NO SAP
+            </button>
+        </div>
+
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Conta / PN</th>
+                    <th>Débito</th>
+                    <th>Crédito</th>
+                    <th>Histórico</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="tabelaCorpo"></tbody>
+            <tfoot>
+                <tr class="fw-bold">
+                    <td>Total</td>
+                    <td id="totalDebito" class="text-success">0,00</td>
+                    <td id="totalCredito" class="text-danger">0,00</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+    var sapData = {% if payload %}{{ payload | tojson | safe }}{% else %}null{% endif %};
+
+    function renderizarTabela() {
+        var corpo = document.getElementById('tabelaCorpo');
+        if (!corpo) return;
+        if (!sapData || !sapData.JournalEntryLines) return;
+
+        corpo.innerHTML = '';
+        var totalDeb = 0;
+        var totalCred = 0;
+
+        sapData.JournalEntryLines.forEach(function(line, index) {
+            var conta = line.AccountCode || line.ShortName || "---";
+            var deb = Number(line.Debit) || 0;
+            var cred = Number(line.Credit) || 0;
+            totalDeb += deb;
+            totalCred += cred;
+
+            corpo.innerHTML += '<tr>' +
+                '<td><b>' + conta + '</b></td>' +
+                '<td class="text-success">' + (deb > 0 ? deb.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-') + '</td>' +
+                '<td class="text-danger">' + (cred > 0 ? cred.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-') + '</td>' +
+                '<td>' + (line.LineMemo || '') + '</td>' +
+                '<td><button onclick="removerLinha(' + index + ')">X</button></td>' +
+                '</tr>';
+        });
+
+        var elDeb = document.getElementById('totalDebito');
+        var elCred = document.getElementById('totalCredito');
+
+        if (elDeb) elDeb.innerText = totalDeb.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        if (elCred) elCred.innerText = totalCred.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+        if (totalDeb !== totalCred) {
+            if (elDeb) elDeb.style.color = 'red';
+            if (elCred) elCred.style.color = 'red';
+        }
+    }
+
+    function removerLinha(i) {
+        sapData.JournalEntryLines.splice(i, 1);
+        renderizarTabela();
+    }
+
+    function gerarPreview() {
+        document.getElementById('acao_hidden').value = 'preview';
+        document.getElementById('mainForm').submit();
+    }
+
+    function enviarParaSap() {
+        document.getElementById('loading').style.display = 'flex';
+        document.getElementById('json_editado').value = JSON.stringify(sapData);
+        document.getElementById('acao_hidden').value = 'postar';
+        document.getElementById('mainForm').submit();
+    }
+
+    var moniqueAtivo = false;
+
+    function ativarMonique() {
+        moniqueAtivo = !moniqueAtivo;
+        var btn = document.getElementById('btnMonique');
+
+        if (moniqueAtivo) {
+            document.body.style.backgroundColor = '#ffb6c1';
+            btn.textContent = '🐱 Monique ON';
+            btn.style.background = 'linear-gradient(135deg, #ff1493, #c2185b)';
+
+            var posGalhos = [
+                { top: '15%', left: '2%' },
+                { top: '35%', right: '3%' },
+                { top: '55%', left: '5%' },
+                { top: '75%', right: '2%' }
+            ];
+
+            posGalhos.forEach(function(pos) {
+                var g = document.createElement('div');
+                g.className = 'galho monique-elemento';
+                g.textContent = '🌿';
+                if (pos.top)   g.style.top   = pos.top;
+                if (pos.left)  g.style.left  = pos.left;
+                if (pos.right) g.style.right = pos.right;
+                document.body.appendChild(g);
+            });
+
+            for (var i = 0; i < 15; i++) {
+                (function(delay) {
+                    setTimeout(function() { criarGato(); }, delay);
+                })(i * 400);
+            }
+
+        } else {
+            document.body.style.backgroundColor = '#f4f7f6';
+            btn.textContent = '🐱 Monique';
+            btn.style.background = 'linear-gradient(135deg, #ff69b4, #ff1493)';
+            document.querySelectorAll('.monique-elemento').forEach(function(el) { el.remove(); });
+        }
+    }
+
+    function criarGato() {
+        if (!moniqueAtivo) return;
+
+        var emojis = ['🐱', '🐈', '🐈\u200D⬛', '😸', '😺'];
+        var el = document.createElement('div');
+        el.className = 'gato-voador monique-elemento';
+        el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+        var tamanho = 28 + Math.random() * 36;
+        var duracao = 3 + Math.random() * 4;
+        var leftPos = Math.random() * 92;
+
+        el.style.cssText = 'position:fixed;font-size:' + tamanho + 'px;left:' + leftPos + 'vw;bottom:-80px;z-index:0;pointer-events:none;user-select:none;animation:pularGalho ' + duracao + 's ease-in-out forwards;filter:drop-shadow(0px 2px 4px rgba(255,20,147,0.3));';
+
+        document.body.appendChild(el);
+
+        setTimeout(function() {
+            el.remove();
+            if (moniqueAtivo) criarGato();
+        }, duracao * 1000);
+    }
+
+    window.onload = renderizarTabela;
+</script>
+
+</body>
+</html>

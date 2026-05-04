@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - SAP Bridge</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #0b3d91, #0070d2);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 15px;
+            padding: 35px;
+            width: 370px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            animation: fadeIn 0.6s ease;
+        }
+
+        .logo {
+            display: block;
+            margin: 0 auto 15px;
+            width: 120px;
+        }
+
+        .titulo {
+            text-align: center;
+            font-weight: 700;
+            color: #0b3d91;
+            margin-bottom: 20px;
+        }
+
+        .form-control {
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .btn-login {
+            background: #0070d2;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn-login:hover {
+            background: #005fb2;
+            transform: scale(1.02);
+        }
+
+        .alert {
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-card">
+
+    <!-- 🔵 LOGO -->
+    <img src="/static/logo.png" class="logo">
+
+    <div class="titulo">SAP Bridge</div>
+
+    {% if erro %}
+        <div class="alert alert-danger">{{ erro }}</div>
+    {% endif %}
+
+    <form method="post">
+        <input type="text" name="usuario" class="form-control mb-3" placeholder="Usuário" required>
+        <input type="password" name="senha" class="form-control mb-3" placeholder="Senha" required>
+
+        <button class="btn btn-login w-100">Entrar</button>
+    </form>
+
+</div>
+
+</body>
+</html>
