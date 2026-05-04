@@ -148,9 +148,9 @@ def login_sap():
     url = "https://b1.ativy.com:51032/b1s/v1/Login"
 
     payload = {
-        "CompanyDB": "SBO_PRD_INOVASUPRI",
-        "UserName": "3i_0016",
-        "Password": "Ib@admin016"
+        "CompanyDB": os.getenv("CompanyDB"),
+        "UserName": os.getenv("SAP_USER"),
+        "Password": os.getenv("SAP_PASSWORD")
     }
 
     r = requests.post(url, json=payload, verify=False)
