@@ -18,7 +18,7 @@ app = Flask(__name__)
 app.secret_key = 'chave_secreta_para_sessao_sap'
 
 USUARIOS = {
-    "admin": "1234",
+    "admin": "3i-Distribuidora",
     "monique": "1998",
     "gregory": "2604",
     "jeferson": "0825",
