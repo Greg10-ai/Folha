@@ -8,9 +8,9 @@ import os
 from functools import wraps
 from dotenv import load_dotenv
 from flask import redirect
+from datetime import datetime
 
 load_dotenv()
-
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -18,7 +18,7 @@ app = Flask(__name__)
 app.secret_key = 'chave_secreta_para_sessao_sap'
 
 USUARIOS = {
-    "admin": "3i-Distribuidora",
+    "admin": "3243",
     "monique": "1998",
     "gregory": "2604",
     "jeferson": "0825",
@@ -32,6 +32,7 @@ def login_required(f):
             return redirect("/login")
         return f(*args, **kwargs)
     return decorated_function
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -47,7 +48,6 @@ def login():
 
     return render_template("login.html")
 
-
 # =============================
 # LOGOUT
 # =============================
@@ -55,6 +55,7 @@ def login():
 def logout():
     session.clear()
     return redirect('/login')
+
 # =============================
 # CONFIG
 # =============================
@@ -160,9 +161,32 @@ def login_sap():
     return r.cookies if r.status_code == 200 else None
 
 # =============================
+# CONVERSÃO DE DATA
+# =============================
+def converter_data(data_str):
+    """
+    Converte a data vinda do HTML (YYYY-MM-DD)
+    para o formato aceito pelo SAP (YYYY-MM-DDT00:00:00)
+    """
+    try:
+        dt = datetime.strptime(data_str, "%Y-%m-%d")
+        return dt.strftime("%Y-%m-%dT00:00:00")
+    except Exception as e:
+        print(f"⚠️ Erro ao converter data '{data_str}': {e}")
+        return data_str  # retorna original se falhar
+
+# =============================
 # PROCESSAMENTO
 # =============================
 def processar_dados(file_rel, mes, dt_l, dt_v, vendedor_alvo):
+
+    # ✅ Converte as datas para o formato correto do SAP
+    dt_lancamento = converter_data(dt_l)
+    dt_vencimento = converter_data(dt_v)
+
+    print(f"📅 Data Lançamento: {dt_lancamento}")
+    print(f"📅 Data Vencimento: {dt_vencimento}")
+
     df = ler_excel_seguro(file_rel)
 
     linha_meses = df.iloc[0, :].ffill().tolist()
@@ -227,9 +251,9 @@ def processar_dados(file_rel, mes, dt_l, dt_v, vendedor_alvo):
             })
 
     return {
-        "ReferenceDate": dt_l,
-        "DueDate": dt_v,
-        "TaxDate": dt_l,
+        "ReferenceDate": dt_lancamento,   # ✅ Data de Lançamento convertida
+        "DueDate":       dt_vencimento,   # ✅ Data de Vencimento convertida
+        "TaxDate":       dt_lancamento,   # ✅ Data Fiscal = Data de Lançamento
         "Memo": f"FECHAMENTO PJ - {mes}",
         "JournalEntryLines": linhas
     }
@@ -256,7 +280,7 @@ def add_vendedor():
 
     except Exception as e:
         return render_template("retorno.html", mensagem=f"❌ Erro: {str(e)}")
-    
+
 # =============================
 # ATUALIZAR PN LOCAL
 # =============================
@@ -267,17 +291,15 @@ def editar_vendedor():
         novo_pn = request.form.get('pn').strip()
 
         if nome not in MAPEAMENTO_PN:
-            return render_template("retorno.html",mensagem="❌ Vendedor não encontrado")
+            return render_template("retorno.html", mensagem="❌ Vendedor não encontrado")
 
         MAPEAMENTO_PN[nome] = novo_pn
-
         salvar_pn()
 
         return render_template("retorno.html", mensagem="✅ PN atualizado com sucesso")
 
     except Exception as e:
-        return render_template("retorno.html",
-                               mensagem=f"❌ Erro: {str(e)}")
+        return render_template("retorno.html", mensagem=f"❌ Erro: {str(e)}")
 
 # =============================
 # ROTAS
